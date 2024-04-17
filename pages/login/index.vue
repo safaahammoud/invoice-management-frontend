@@ -1,8 +1,7 @@
 <template>
   <v-form
-    :model-value="isFormValid"
-    @update:model-value="updateValidity"
-    @submit.prevent="validateForm"
+    ref="loginFormRef"
+    @submit.enter.prevent="validateForm"
   >
     <v-text-field
       v-model="formValue.username"
@@ -19,14 +18,6 @@
 
     <div class="text-subtitle-1 text-medium-emphasis d-flex align-center justify-space-between">
       Password
-
-      <a
-        class="text-caption text-decoration-none text-blue"
-        href="#"
-        rel="noopener noreferrer"
-        target="_blank"
-      >
-        Forgot login password?</a>
     </div>
 
     <v-text-field
@@ -77,16 +68,13 @@ const validationRules = ref({
   email: (v: string) => (!v?.trim() || regexExpressions.EMAIL.test(v)) || 'Field must be an email',
 });
 
-const isFormValid = ref(false);
-
-const updateValidity = (isValid: boolean | null) => isFormValid.value = Boolean(isValid);
-
-const showSnackbar = ref(false);
-const errors = ref<FieldErrorAPI[]>([]);
 const { authenticateUser } = useAuthStore();
 const { isAuthenticated } = storeToRefs(useAuthStore())
+const loginFormRef = ref();
 
 const validateForm = async () => {
+  const { valid: isFormValid } = await loginFormRef.value.validate()
+
   if(isFormValid) {
     const { username, password } = formValue.value;
 

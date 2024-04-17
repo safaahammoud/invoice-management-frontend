@@ -145,8 +145,6 @@
             @click="validateForm"
           />
         </v-card-actions>
-
-        <v-btn @click="formatInvoiceDateToIso(formValue.dateIssued)">format date</v-btn>
       </v-card>
     </v-dialog>
   </div>

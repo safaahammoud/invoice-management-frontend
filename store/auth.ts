@@ -16,7 +16,7 @@ const SIGNIN_QUERY = gql`
   }
 `
 
-export const useAuthStore = defineStore('auth', {
+export const useAuthStore = defineStore('AuthStore', {
     state: () => ({
         isAuthenticated: false,
     }),

@@ -5,7 +5,7 @@ export default defineNuxtConfig({
   build: {
     transpile: ['vuetify'],
   },
-  css: ['@/assets/css/main.css'],
+  css: ['@/assets/scss/main.scss'],
   modules: [
     (_options, nuxt) => {
       nuxt.hooks.hook('vite:extendConfig', (config) => {

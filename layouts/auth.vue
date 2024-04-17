@@ -11,25 +11,34 @@
       <slot />
 
       <v-card-text class="text-center">  
-        <nuxt-link v-if="currentRouteName === 'login'" to="/signup" >Sign up now</nuxt-link>
-        <nuxt-link v-else-if="currentRouteName === 'signup'" to="/login" >login</nuxt-link>
-
-        <v-icon icon="mdi-chevron-right"></v-icon>
+        <nuxt-link to="/signup" >Sign up now</nuxt-link> |
+        <nuxt-link to="/login" >login</nuxt-link>
       </v-card-text>
     </v-card>
   </div>
 </template>
-  
-<script setup lang="ts">
-const { name: currentRouteName } = useRoute();
-</script>
-  
-<style scoped>
+
+<style lang="scss" scoped>
+@import '@/assets/scss/_variables.scss';
+
 .login-wrapper {
   padding: 1rem;
   height: 100%;
   display: flex;
   justify-content: center;
-  margin-top: 10rem;
+  align-items: center;
+  background: linear-gradient(to top left, $burgundy-dark, $burgundy-light);
+  
+  .v-card {
+    height: 90%;
+  }
+}
+
+@media screen and (min-width: 767px) {
+  .login-wrapper {
+    .v-card {
+      height: 60%;
+    }
+  }
 }
 </style>

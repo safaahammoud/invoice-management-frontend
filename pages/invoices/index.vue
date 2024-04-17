@@ -50,7 +50,7 @@
       <template v-slot:bottom>
         <div class="text-center pt-2">
           <v-pagination
-            :length="pageCount"
+            :length="totalPages"
             @update:model-value="onPageChange"
           ></v-pagination>
 
@@ -70,29 +70,13 @@
         @on-send="onUpdateInvoiceStatus"
       />
     </Teleport>
-
-    <v-snackbar
-      v-model="showSnackbar"
-      multi-line
-    >
-      {{ snackbarMsg }}
-
-      <template v-slot:actions>
-        <v-btn
-          color="red"
-          variant="text"
-          @click="showSnackbar = false"
-        >
-          Close
-        </v-btn>
-      </template>
-    </v-snackbar>
 </template>
 
 <script setup lang="ts">
 import { gql, useMutation, useQuery } from '@urql/vue';
 import type { VDataTable } from 'vuetify/components';
 
+import { useSnackBarStore } from '@/store/snack-bar-store';
 import type { Invoice } from '@/types/Invoice.type';
 import type { Pagination } from '@/types/pagination.type';
 import debounce from '@/utils/debounce.util';
@@ -100,6 +84,9 @@ import debounce from '@/utils/debounce.util';
 definePageMeta({
   requiresAuth: true,
 })
+
+const { showSnackbar } = useSnackBarStore();
+
 /*
   Typing Issue: Replaced VDataTableHeaders with VDataTable['$props']['headers']
   since VDataTableHeaders is showing error with title prop doesnt exist although it exists as per documentation
@@ -116,12 +103,10 @@ const currentItemsPerPage = ref(5);
 const serverItems = ref([]);
 const totalItems = ref(0);
 const isOpen = ref(false);
-const showSnackbar = ref(false);
 const currentSelectedInvoice = ref();
 const currentPage = ref<number>(1);
 const searchTermInput = ref<string>('');
-const snackbarMsg = ref<string>('');
-const pageCount = ref(0);
+const totalPages = ref(0);
 const toUpdateInvoiceId = ref(0);
 
 const QUERY_INVOICES = gql`
@@ -160,16 +145,15 @@ const onUpdateInvoiceStatus = async ($event) => {
   
     isOpen.value = false;
     
-    snackbarMsg.value = 'Updated Successfully!';
-    showSnackbar.value = true;
+    showSnackbar('Updated Successfully!');
 }
 
 const onAddInvoice = async () => {
     loadItems()
   
     isOpen.value = false;
-    snackbarMsg.value = 'Added New Invoice Successfully!';
-    showSnackbar.value = true;
+
+    showSnackbar('Added New Invoice Successfully!')
 }
 
 const setCurrentItem = (item: Invoice) => {
@@ -195,9 +179,11 @@ const loadItems = async ($event: Pagination = { page: 1, itemsPerPage: 5, search
     })
   );
   
-  serverItems.value = result.invoices.data;
-  totalItems.value = result.invoices.totalCount;
-  pageCount.value = result.invoices.pageCount;
+  const { data, totalCount, pageCount } = result?.invoices;
+  
+  serverItems.value = data || [];
+  totalItems.value = totalCount || 0;
+  totalPages.value = pageCount || 0;
 }
 
 const searchInvoices = debounce(async (event: Event) => {
