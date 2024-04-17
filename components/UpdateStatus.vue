@@ -26,6 +26,7 @@
                         <div class="mb-2">Message (optional)</div>
 
                         <v-textarea
+                            v-model="note"
                             :counter="300"
                             class="mb-2"
                             rows="2"
@@ -50,7 +51,7 @@
                     rounded="xl"
                     text="Send"
                     variant="flat"
-                    @click="emits('close')"
+                    @click="emits('onSend', { status, note })"
                 />
             </v-card-actions>
         </v-card>
@@ -62,7 +63,9 @@ const props = defineProps<{
     isOpen: boolean;
     currentStatus: string;
 }>();
-const emits = defineEmits(['close']);
+
+const note = ref<string>('');
+const emits = defineEmits(['close', 'onSend']);
 
 const currentStatus = ref('');
 const statuses = ref(['pending', 'paid', 'financed']);

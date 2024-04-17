@@ -13,8 +13,21 @@ export default defineNuxtConfig({
         config.plugins.push(vuetify({ autoImport: true }))
       })
     },
-    //...
+    "nuxt-security",
+    '@pinia/nuxt',
   ],
+  pinia: {
+    storesDirs: ['./stores/**'],
+  },
+  security: {
+    corsHandler: {
+      origin: 'http://localhost:3000',
+      methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE'],
+      preflight: {
+        statusCode: 204
+      },
+    },
+  },
   vite: {
     vue: {
       template: {
@@ -23,3 +36,4 @@ export default defineNuxtConfig({
     },
   },
 })
+

@@ -1,10 +1,25 @@
 <template>
-    <div class="btn-wrapper">
-      <FormAddInvoice/>
+    <div class="flex-wrapper">
+      <FormAddInvoice @success="onAddInvoice"/>
+    </div>
+
+    <div>
+      <div class="search-wrapper">
+        <div class="search-input">
+          <span id="searchInputLabel">Search invoices</span>
+        
+          <v-text-field
+              aria-labelledby="searchInputLabel"
+              append-inner-icon="mdi-magnify"
+              placeholder="Search ..."
+              @keyup="searchInvoices"
+          ></v-text-field>
+        </div>
+      </div>
     </div>
 
     <v-data-table-server
-        v-model:items-per-page="itemsPerPage"
+        v-model:items-per-page="currentItemsPerPage"
         :headers="headers"
         :items="serverItems"
         :items-length="totalItems"
@@ -25,12 +40,24 @@
           </template>
 
           <div class="actions">
-            <v-btn @click="onClickUpdate" prepend-icon="mdi-pen">
+            <v-btn @click="onClickUpdate(item.id)" prepend-icon="mdi-pen">
                 Update Status
             </v-btn>
           </div>  
         </v-menu>  
-        
+      </template>
+
+      <template v-slot:bottom>
+        <div class="text-center pt-2">
+          <v-pagination
+            :length="pageCount"
+            @update:model-value="onPageChange"
+          ></v-pagination>
+
+          <span>
+            Total {{ totalItems }}
+          </span>
+        </div>
       </template>
     </v-data-table-server>
 
@@ -40,99 +67,160 @@
         :is-open="isOpen"        
         :current-status="currentSelectedInvoice.status"
         @close="isOpen = false"
+        @on-send="onUpdateInvoiceStatus"
       />
     </Teleport>
+
+    <v-snackbar
+      v-model="showSnackbar"
+      multi-line
+    >
+      {{ snackbarMsg }}
+
+      <template v-slot:actions>
+        <v-btn
+          color="red"
+          variant="text"
+          @click="showSnackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
 </template>
 
 <script setup lang="ts">
-import type { FetchAllInvoicesQuery, Invoice } from '@/types/Invoice.type';
-import axios from 'axios';
+import { gql, useMutation, useQuery } from '@urql/vue';
+import type { VDataTable } from 'vuetify/components';
 
-const backendUrl = import.meta.env.VITE_API_BACKEND_URL;
-const invoices = ref<Invoice[]>([
-  {
-    number: '123',
-    dateIssued: '2024-04-03',
-    dueDate: '2024-04-03',
-    status: 'pending',
-    amount: 1200,
-    currencySymbol: '$'
-  },
-  {
-    number: '342',
-    dateIssued: '2024-04-03',
-    dueDate: '2024-04-03',
-    status: 'paid',
-    amount: 2000,
-    currencySymbol: '$'
-  },
-  {
-    number: '11',
-    dateIssued: '2024-04-03',
-    dueDate: '2024-04-03',
-    status: 'financed',
-    amount: 3000,
-    currencySymbol: '$'
-  },
-]);
-const itemsPerPage = ref(5);
-const headers = ref([
-  { title: 'Number', key: 'number', align: 'end' },
+import type { Invoice } from '@/types/Invoice.type';
+import type { Pagination } from '@/types/pagination.type';
+import debounce from '@/utils/debounce.util';
+
+definePageMeta({
+  requiresAuth: true,
+})
+/*
+  Typing Issue: Replaced VDataTableHeaders with VDataTable['$props']['headers']
+  since VDataTableHeaders is showing error with title prop doesnt exist although it exists as per documentation
+*/
+const headers = ref<VDataTable['$props']['headers']>([
+  { title: 'Reference Number', key: 'referenceNumber', align: 'end',  },
   { title: 'Amount', key: 'amount', align: 'end' },
   { title: 'Date Issued', key: 'dateIssued', align: 'center' },
   { title: 'Due Date', key: 'dueDate', align: 'center' },
   { title: 'Status', key: 'status', align: 'center' },
   { title: '', key: 'actions', align: 'center' },
 ]);
+const currentItemsPerPage = ref(5);
 const serverItems = ref([]);
-const loading = ref(true);
 const totalItems = ref(0);
-const currentSelectedInvoice = ref();
 const isOpen = ref(false);
-const onClickUpdate = () => {
+const showSnackbar = ref(false);
+const currentSelectedInvoice = ref();
+const currentPage = ref<number>(1);
+const searchTermInput = ref<string>('');
+const snackbarMsg = ref<string>('');
+const pageCount = ref(0);
+const toUpdateInvoiceId = ref(0);
+
+const QUERY_INVOICES = gql`
+  query ($currentPage: Int, $itemsPerPage: Int!, $searchTerm: String) {
+    invoices(currentPage: $currentPage, itemsPerPage: $itemsPerPage, searchTerm: $searchTerm)
+  }
+`
+const { executeQuery: fetchInvoicesQuery, fetching: isFetching } = useQuery({
+  query: QUERY_INVOICES,
+  variables: {
+    currentPage,
+    itemsPerPage: currentItemsPerPage,
+    searchTerm: searchTermInput,
+  },
+  requestPolicy: 'cache-and-network'
+})
+const MUTATION_UPDATE_INVOICES = gql`
+  mutation ($updateInvoiceInput: UpdateInvoiceInput!) {
+    updateInvoice(updateInvoiceInput: $updateInvoiceInput) {
+      status
+      note
+    }
+  }
+`
+const { executeMutation: updateInvoicesMutation, fetching: isUpdating } = useMutation(MUTATION_UPDATE_INVOICES)
+const loading = computed(() => isFetching.value);
+
+const onClickUpdate = (id: number) => {
+  toUpdateInvoiceId.value = id;
   isOpen.value = true;
 }
+
+const onUpdateInvoiceStatus = async ($event) => {
+  await updateInvoicesMutation({updateInvoiceInput:{ id: toUpdateInvoiceId.value, ...$event }})
+    .catch((err) => console.log(err))
+  
+    isOpen.value = false;
+    
+    snackbarMsg.value = 'Updated Successfully!';
+    showSnackbar.value = true;
+}
+
+const onAddInvoice = async () => {
+    loadItems()
+  
+    isOpen.value = false;
+    snackbarMsg.value = 'Added New Invoice Successfully!';
+    showSnackbar.value = true;
+}
+
 const setCurrentItem = (item: Invoice) => {
   currentSelectedInvoice.value = item;
 }
 
-const fetchAllInvoices = async (query: FetchAllInvoicesQuery | null = null) => {
-  let url: string = '';
-  let page: number = 1;
-  let search: string = '';
-
-  if (query) {
-      page = query?.page || 1;
-      search = query?.search || '';
-  }
-
-  if (search) {
-      url = `${backendUrl}search/shows?q=${search}`;
-  } else {
-      url = `${backendUrl}shows?page=${page}`;
-  }
-
-  loading.value = true;
-  //TODO: when api is done
-  return axios.get<{ items: any, total: number }[]>(url);
+const onPageChange = (page = 1) => {
+  loadItems({ page, itemsPerPage: currentItemsPerPage.value, searchTerm: searchTermInput.value }) 
 }
 
-const loadItems = async ({ page = 1, itemsPerPage = 5 }) => {
-  loading.value = true;
+const loadItems = async ($event: Pagination = { page: 1, itemsPerPage: 5, searchTerm: '' }) => {
+  const { page, itemsPerPage, searchTerm } = $event;
 
-  const { data } = (
-    await fetchAllInvoices({ page, itemsPerPage })
-      .finally(() => loading.value = false)
+  currentPage.value = page || 1;
+  currentItemsPerPage.value = itemsPerPage || 5;
+  searchTermInput.value = searchTerm || '';
+
+  const { data: { value: result } } = (
+    await fetchInvoicesQuery({
+      currentPage: currentPage.value,
+      itemsPerPage: currentItemsPerPage.value,
+      searchTerm,
+    })
   );
-
-  serverItems.value = data.items;
-  totalItems.value = data.total;
+  
+  serverItems.value = result.invoices.data;
+  totalItems.value = result.invoices.totalCount;
+  pageCount.value = result.invoices.pageCount;
 }
+
+const searchInvoices = debounce(async (event: Event) => {
+  const searchTerm: string = (event.target as HTMLInputElement).value;
+  
+  loadItems({ searchTerm });
+});
 </script>
 
-<style scoped>
-.btn-wrapper {
+<style lang="scss" scoped>
+.flex-wrapper {
   display: flex;
   justify-content: end;
+}
+
+.search-wrapper {
+  display: flex;
+  justify-content: center;
+
+  .search-input {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 5rem;
+  }
 }
 </style>

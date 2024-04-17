@@ -25,7 +25,7 @@
                 sm="6"
               >
                 <v-text-field
-                  v-model="formValue.invoiceNumber"
+                  v-model.number="formValue.referenceNumber"
                   :rules="[
                     validationRules.required,
                     validationRules.maxNumber,
@@ -71,6 +71,7 @@
                       color="primary"
                       v-model="formattedInvoiceDueDate"
                       append-inner-icon="mdi-calendar"
+                      label="Due date"
                       v-bind="props"
                       readonly
                     ></v-text-field>
@@ -121,7 +122,7 @@
             </v-row>
           </v-form>
 
-          <div class="text-wrapper">
+          <div class="field-required-text-wrapper">
             <small class="text-caption text-medium-emphasis">*All fields are required</small>
           </div>
         </v-card-text>
@@ -144,16 +145,20 @@
             @click="validateForm"
           />
         </v-card-actions>
+
+        <v-btn @click="formatInvoiceDateToIso(formValue.dateIssued)">format date</v-btn>
       </v-card>
     </v-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
+import { gql, useMutation } from '@urql/vue';
 import { useDate } from 'vuetify';
 
+const emits = defineEmits(['success']);
 const formValue = ref({
-  invoiceNumber: '',
+  referenceNumber: '',
   amount: '',
   dueDate: null,
   dateIssued: null,
@@ -164,16 +169,39 @@ const validationRules = ref({
   required: (value: any) => !!value || 'Field is required',
   maxNumber: (value: number) => value <= Number.MAX_SAFE_INTEGER || 'Number field reached maximum value',
 });
+//TODO: add setter to set to empty for both computed values
+const formattedInvoiceDueDate = computed(() => formValue.value.dueDate ? formatInvoiceDate(formValue.value.dueDate) : '');
+const formattedInvoiceDateIssued = computed(() => formValue.value.dateIssued ? formatInvoiceDate(formValue.value.dateIssued) : '');
 
-const formattedInvoiceDueDate = computed(() => formatInvoiceDate(formValue.value.dueDate));
-const formattedInvoiceDateIssued = computed(() => formatInvoiceDate(formValue.value.dateIssued));
+const CREATE_INVOICE_MUT = gql`
+  mutation ($createInvoiceInput: CreateInvoiceInput!) {
+    createInvoice(createInvoiceInput: $createInvoiceInput) {
+      referenceNumber
+      dateIssued
+      dueDate
+      status
+      amount
+    }
+  }
+`
+const { executeMutation: createInvoiceInput, fetching } = useMutation(CREATE_INVOICE_MUT);
 
-const validateForm = () => {
-  const { valid:isFormValid } = invoiceFormRef.value.validate();
+const validateForm = async () => {
+  const { valid: isFormValid } = await invoiceFormRef.value.validate();
 
   if(isFormValid) {
-    //TODO: api request here
-    isAddInvoiceDialogOpen.value = false;
+    await createInvoiceInput({
+      createInvoiceInput: {
+        ...formValue.value,
+        status: 'pending',
+        dateIssued: formatInvoiceDateToIso(formValue.value.dateIssued),
+        dueDate: formatInvoiceDateToIso(formValue.value.dueDate),
+      }
+    });
+
+    emits('success')
+    
+    onCloseDialog()
   }
 };
 
@@ -184,6 +212,10 @@ const formatInvoiceDate = (date: Date | null): string => {
   return formattedDate;
 };
 
+const formatInvoiceDateToIso = (date: Date | null): string => {
+  return date ? new Date(date).toISOString() : ''
+};
+
 const onCloseDialog = () => {
   isAddInvoiceDialogOpen.value = false;
   invoiceFormRef.value.reset();
@@ -191,7 +223,7 @@ const onCloseDialog = () => {
 </script>
 
 <style scoped>
-.text-wrapper {
+.field-required-text-wrapper {
   display: flex;
   justify-content: end;
 }

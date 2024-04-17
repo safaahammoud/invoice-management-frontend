@@ -15,6 +15,7 @@
 <script setup lang="ts">
 
 </script>
+
 <style scoped>
 .nav-bar {
     display: flex;

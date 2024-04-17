@@ -1,0 +1,7 @@
+query {
+  invoices(itemsPerPage: 10, cursor: 23) {
+    id
+    amount
+    createdAt
+  }
+}

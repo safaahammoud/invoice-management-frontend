@@ -1,7 +1,11 @@
 <template>
-  <v-form ref="loginForm">
+  <v-form
+    :model-value="isFormValid"
+    @update:model-value="updateValidity"
+    @submit.prevent="validateForm"
+  >
     <v-text-field
-      v-model="formValue.email"
+      v-model="formValue.username"
       :rules="[
           validationRules.required,
           validationRules.email,
@@ -43,8 +47,8 @@
       size="large"
       variant="tonal"
       type="submit"
+      :loading="false"
       block
-      @click="validateForm"
     >
       Log In
     </v-btn>
@@ -53,14 +57,19 @@
   
 <script setup lang="ts">
 import regexExpressions from '@/consts/regex-expressions.const';
+import { useAuthStore } from '@/store/auth';
+import type { FieldErrorAPI } from '@/types/field-error.type';
 
 definePageMeta({
-  layout: 'auth'
+  layout: 'auth',
+  requiresAuth: false,
 });
+
+const router = useRouter();
 const loginForm = ref();
 const visible = ref<boolean>(false);
 const formValue = ref({
-  email: '',
+  username: '',
   password: '',
 });
 const validationRules = ref({
@@ -68,11 +77,24 @@ const validationRules = ref({
   email: (v: string) => (!v?.trim() || regexExpressions.EMAIL.test(v)) || 'Field must be an email',
 });
 
-const validateForm = () => {
-  const { valid:isFormValid } = loginForm.value.validate();
+const isFormValid = ref(false);
 
+const updateValidity = (isValid: boolean | null) => isFormValid.value = Boolean(isValid);
+
+const showSnackbar = ref(false);
+const errors = ref<FieldErrorAPI[]>([]);
+const { authenticateUser } = useAuthStore();
+const { isAuthenticated } = storeToRefs(useAuthStore())
+
+const validateForm = async () => {
   if(isFormValid) {
-      //TODO: api request here
+    const { username, password } = formValue.value;
+
+    await authenticateUser({ username, password });
+
+    if(isAuthenticated.value) {
+      router.push('/invoices');
+    }
   }
 };
 </script>

@@ -1,9 +1,3 @@
-export type FetchAllInvoicesQuery = {
-    page?: number;
-    search?: string;
-    itemsPerPage?: number;
-}
-
 export type Invoice = {
     number: string;
     dateIssued: string;
@@ -11,4 +5,5 @@ export type Invoice = {
     status: string;
     amount: number;
     currencySymbol: string;
+    note?: string;
 }

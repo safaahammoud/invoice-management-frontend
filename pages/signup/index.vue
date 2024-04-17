@@ -1,7 +1,7 @@
 <template>
-  <v-form ref="signupForm">
+  <v-form ref="signupFormRef" @submit.prevent="validateForm">
     <v-text-field
-      v-model="formValue.email"
+      v-model="formValue.username"
       :rules="[
           validationRules.required,
           validationRules.email,
@@ -43,41 +43,98 @@
 
     <v-btn
       class="mb-8"
-      color="blue"
+      color="primary"
       size="large"
       variant="tonal"
-      type="submit"
       block
-      @click="validateForm"
+      type="submit"
+      :loading="fetching"
     >
       Sign up
     </v-btn>
   </v-form>
+
+  <v-snackbar
+      v-model="showSnackbar"
+      multi-line
+    >
+      <ul
+        v-for="error in errors"
+        :key="error.field"
+      >
+        <li>{{ error.message }}</li>
+      </ul>
+
+      <template v-slot:actions>
+        <v-btn
+          color="red"
+          variant="text"
+          @click="showSnackbar = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
 </template>
   
 <script setup lang="ts">
+import { gql, useMutation } from '@urql/vue';
+
 import regexExpressions from '@/consts/regex-expressions.const';
+import type { FieldErrorAPI } from '@/types/field-error.type';
 
 definePageMeta({
   layout: 'auth'
 });
-const signupForm = ref();
+
+const router = useRouter();
+const signupFormRef = ref();
+const showSnackbar = ref(false);
 const visible = ref<boolean>(false);
+const errors = ref<FieldErrorAPI[]>([]);
+const REGISTER_MUT = gql`
+  mutation ($createUserInput: CreateUserInput!) {
+    registerUser(createUserInput: $createUserInput) {
+      errors {
+        field,
+        message,
+      },
+      user {
+        id
+      }
+    }
+  }
+`
+const { executeMutation: signUpUser, fetching } = useMutation(REGISTER_MUT);
 const formValue = ref({
-  email: '',
+  username: '',
   password: '',
   confirmPassword: '',
 });
-
 const validationRules = ref({
-    required: (value: any) => !!value || 'Field is required',
-    email: (v: string) => (!v?.trim() || regexExpressions.EMAIL.test(v)) || 'Field must be an email',
+  required: (value: any) => !!value || 'Field is required',
+  email: (v: string) => (!v?.trim() || regexExpressions.EMAIL.test(v)) || 'Field must be an email',
 });
-const validateForm = () => {
-    const { valid:isFormValid } = signupForm.value.validate();
 
-    if(isFormValid) {
-        //TODO: api request here
-    }
+const validateForm = async () => {
+  const { valid: isFormValid } = await signupFormRef.value.validate();
+
+  if(isFormValid) {
+      const { username, password } = formValue.value;
+
+      const finalresult = await signUpUser({
+        createUserInput: {
+          username,
+          password,
+        }})      
+        
+      if(finalresult.data?.registerUser?.errors?.length) {
+        errors.value = finalresult.data?.registerUser?.errors;
+
+        showSnackbar.value = true;
+      } else if(finalresult.data?.registerUser?.user) {
+        router.push('/invoices');
+      }
+  }
 };
 </script>
