@@ -1,13 +1,16 @@
 <template>
     <v-app>
-        <div class="nav-bar">
+        <div
+            prominent
+            class="nav-bar"
+        >
             <v-icon icon="mdi-cash-multiple" />
 
             <v-menu location="bottom end">
                 <template v-slot:activator="{ props }">
                     <v-btn icon v-bind="props">
-                        <v-avatar color="red" size="large">
-                            <span class="text-h5">{{ user.initials }}</span>
+                        <v-avatar color="grey">
+                            <v-icon icon="mdi-account-circle"></v-icon>
                         </v-avatar>
                     </v-btn>
                 </template>
@@ -16,15 +19,11 @@
                     <v-card-text>
                         <div class="mx-auto text-center">
                             <v-avatar color="red">
-                                <span class="text-h5">{{ user.initials }}</span>
+                                <v-icon icon="mdi-account-circle"></v-icon>
                             </v-avatar>
 
-                            <h3>{{ user.fullName }}</h3>
-
-                            <p class="text-caption mt-1">
-                                {{ user.email }}
-                            </p>
-                          
+                            <h3>{{ user.email }}</h3>
+                        
                             <v-divider class="my-3"></v-divider>
 
                             <v-btn
@@ -49,10 +48,9 @@ import { useAuthStore } from '@/store/auth';
 
 const { logoutUser } = useAuthStore();
 const router = useRouter();
-const user = computed(() => ({ //TODO: Add getCurrentUser query
-    initials: 'N/A',
-    fullName: '',
-    email: ''
+const username = useCookie('username');
+const user = computed(() => ({
+    email: username.value || ''
 }))
 
 const logout = async () => {
@@ -62,10 +60,14 @@ const logout = async () => {
 }
 </script>
 
-<style scoped>
+<style scoped lang="scss">
+@import '@/assets/scss/_variables.scss';
+
 .nav-bar {
     display: flex;
-    justify-content: space-between;
     padding: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(to top left, $burgundy-dark, $burgundy-light);
 }
 </style>

@@ -84,10 +84,6 @@ const visible = ref<boolean>(false);
 const REGISTER_MUT = gql`
   mutation ($createUserInput: CreateUserInput!) {
     registerUser(createUserInput: $createUserInput) {
-      errors {
-        field,
-        message,
-      },
       user {
         id
       }
@@ -167,12 +163,8 @@ const validateForm = async () => {
         
       const data = finalresult.data?.registerUser;
 
-      if(data?.errors?.length) {
-        const formattedErrorMessage = (data?.errors as FieldErrorAPI[]).join('\n');
-
-        showSnackbar(formattedErrorMessage);
-      } else if(data?.user) {
-        showSnackbar('User created successfully')
+      if(data?.user) {
+        showSnackbar('User created successfully');
         clearForm();
 
         router.push('/invoices');

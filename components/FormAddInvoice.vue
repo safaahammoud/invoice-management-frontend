@@ -151,8 +151,9 @@
 </template>
 
 <script setup lang="ts">
-import { gql, useMutation } from '@urql/vue';
 import { useDate } from 'vuetify';
+import { InvoiceStatus } from '@/enums/InvoiceStatus.enum';
+import { gql, useMutation } from '@urql/vue';
 
 const emits = defineEmits(['success']);
 const formValue = ref({
@@ -168,8 +169,8 @@ const validationRules = ref({
   maxNumber: (value: number) => value <= Number.MAX_SAFE_INTEGER || 'Number field reached maximum value',
 });
 //TODO: add setter to set to empty for both computed values
-const formattedInvoiceDueDate = computed(() => formValue.value.dueDate ? formatInvoiceDate(formValue.value.dueDate) : '');
-const formattedInvoiceDateIssued = computed(() => formValue.value.dateIssued ? formatInvoiceDate(formValue.value.dateIssued) : '');
+const formattedInvoiceDueDate = computed(() => formValue.value.dueDate ? formatDate(formValue.value.dueDate) : '');
+const formattedInvoiceDateIssued = computed(() => formValue.value.dateIssued ? formatDate(formValue.value.dateIssued) : '');
 
 const CREATE_INVOICE_MUT = gql`
   mutation ($createInvoiceInput: CreateInvoiceInput!) {
@@ -191,7 +192,7 @@ const validateForm = async () => {
     await createInvoiceInput({
       createInvoiceInput: {
         ...formValue.value,
-        status: 'pending',
+        status: InvoiceStatus.Pending as InvoiceStatus,
         dateIssued: formatInvoiceDateToIso(formValue.value.dateIssued),
         dueDate: formatInvoiceDateToIso(formValue.value.dueDate),
       }
@@ -203,12 +204,12 @@ const validateForm = async () => {
   }
 };
 
-const formatInvoiceDate = (date: Date | null): string => {
-  const dateComp = useDate();
-  const formattedDate = dateComp.format(date, 'fullDateWithWeekday');
+// const formatInvoiceDate = (date: Date | null): string => {
+//   const dateComp = useDate();
+//   const formattedDate = dateComp.format(date, 'fullDateWithWeekday');
 
-  return formattedDate;
-};
+//   return formattedDate;
+// };
 
 const formatInvoiceDateToIso = (date: Date | null): string => {
   return date ? new Date(date).toISOString() : ''

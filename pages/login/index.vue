@@ -38,7 +38,7 @@
       size="large"
       variant="tonal"
       type="submit"
-      :loading="false"
+      :loading="isLoading"
       block
     >
       Log In
@@ -49,7 +49,6 @@
 <script setup lang="ts">
 import regexExpressions from '@/consts/regex-expressions.const';
 import { useAuthStore } from '@/store/auth';
-import type { FieldErrorAPI } from '@/types/field-error.type';
 
 definePageMeta({
   layout: 'auth',
@@ -57,7 +56,6 @@ definePageMeta({
 });
 
 const router = useRouter();
-const loginForm = ref();
 const visible = ref<boolean>(false);
 const formValue = ref({
   username: '',
@@ -71,14 +69,18 @@ const validationRules = ref({
 const { authenticateUser } = useAuthStore();
 const { isAuthenticated } = storeToRefs(useAuthStore())
 const loginFormRef = ref();
+const isLoading = ref(false);
 
 const validateForm = async () => {
   const { valid: isFormValid } = await loginFormRef.value.validate()
 
   if(isFormValid) {
+    isLoading.value = true;
+
     const { username, password } = formValue.value;
 
-    await authenticateUser({ username, password });
+    await authenticateUser({ username, password })
+      .finally(() => isLoading.value = false);
 
     if(isAuthenticated.value) {
       router.push('/invoices');

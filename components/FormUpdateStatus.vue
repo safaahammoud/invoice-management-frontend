@@ -17,6 +17,8 @@
                         <v-select
                             v-model="status"
                             :items="statuses"
+                            item-title="title"
+                            item-value="value"
                             label="Status*"
                             required
                         />
@@ -42,7 +44,7 @@
                     class="text-none"
                     rounded="xl"
                     text="Cancel"
-                    @click="emits('close')"
+                    @click="emits('onClose')"
                 />
 
                 <v-btn
@@ -59,16 +61,17 @@
 </template>
 
 <script setup lang="ts">
+import { statuses } from '@/consts/statuses.const'
+
 const props = defineProps<{
     isOpen: boolean;
     currentStatus: string;
 }>();
 
 const note = ref<string>('');
-const emits = defineEmits(['close', 'onSend']);
+const emits = defineEmits(['onClose', 'onSend']);
 
 const currentStatus = ref('');
-const statuses = ref(['pending', 'paid', 'financed']);
 
 const isDialogOpen = computed(() => props.isOpen);
 const status = computed<string>({

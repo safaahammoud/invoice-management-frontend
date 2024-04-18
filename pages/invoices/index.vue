@@ -31,6 +31,18 @@
         {{ amount }} {{ currencySymbol }}
       </template>
       
+      <template #item.status="{ item: { status } }">
+        <InvoiceStatus :status-code="status" />
+      </template>
+      
+      <template #item.dateIssued="{ item: { dateIssued } }">
+          {{ formatDate(dateIssued) }}
+      </template>
+      
+      <template #item.dueDate="{ item: { dueDate } }">
+          {{ formatDate(dueDate) }}
+      </template>
+      
       <template #item.actions="{ item }">
         <v-menu
           @update:modelValue="setCurrentItem(item)"
@@ -62,11 +74,11 @@
     </v-data-table-server>
 
     <Teleport to="body">
-      <UpdateStatus
-        v-if="isOpen"
-        :is-open="isOpen"        
+      <FormUpdateStatus
+        v-if="isUpdateDialogOpen"
+        :is-open="isUpdateDialogOpen"        
         :current-status="currentSelectedInvoice.status"
-        @close="isOpen = false"
+        @on-close="isUpdateDialogOpen = false"
         @on-send="onUpdateInvoiceStatus"
       />
     </Teleport>
@@ -102,7 +114,7 @@ const headers = ref<VDataTable['$props']['headers']>([
 const currentItemsPerPage = ref(5);
 const serverItems = ref([]);
 const totalItems = ref(0);
-const isOpen = ref(false);
+const isUpdateDialogOpen = ref(false);
 const currentSelectedInvoice = ref();
 const currentPage = ref<number>(1);
 const searchTermInput = ref<string>('');
@@ -121,7 +133,7 @@ const { executeQuery: fetchInvoicesQuery, fetching: isFetching } = useQuery({
     itemsPerPage: currentItemsPerPage,
     searchTerm: searchTermInput,
   },
-  requestPolicy: 'cache-and-network'
+  requestPolicy: 'network-only'
 })
 const MUTATION_UPDATE_INVOICES = gql`
   mutation ($updateInvoiceInput: UpdateInvoiceInput!) {
@@ -136,14 +148,15 @@ const loading = computed(() => isFetching.value);
 
 const onClickUpdate = (id: number) => {
   toUpdateInvoiceId.value = id;
-  isOpen.value = true;
+  isUpdateDialogOpen.value = true;
 }
 
 const onUpdateInvoiceStatus = async ($event) => {
   await updateInvoicesMutation({updateInvoiceInput:{ id: toUpdateInvoiceId.value, ...$event }})
     .catch((err) => console.log(err))
   
-    isOpen.value = false;
+    loadItems();
+    isUpdateDialogOpen.value = false;
     
     showSnackbar('Updated Successfully!');
 }
@@ -151,7 +164,7 @@ const onUpdateInvoiceStatus = async ($event) => {
 const onAddInvoice = async () => {
     loadItems()
   
-    isOpen.value = false;
+    isUpdateDialogOpen.value = false;
 
     showSnackbar('Added New Invoice Successfully!')
 }
@@ -179,8 +192,8 @@ const loadItems = async ($event: Pagination = { page: 1, itemsPerPage: 5, search
     })
   );
   
-  const { data, totalCount, pageCount } = result?.invoices;
-  
+  const { data = [], totalCount = 0, pageCount = 0 } = result?.invoices ?? {};
+
   serverItems.value = data || [];
   totalItems.value = totalCount || 0;
   totalPages.value = pageCount || 0;
@@ -204,6 +217,7 @@ const searchInvoices = debounce(async (event: Event) => {
   justify-content: center;
 
   .search-input {
+    width: 70%;
     display: flex;
     flex-direction: column;
     margin-bottom: 5rem;

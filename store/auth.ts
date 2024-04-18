@@ -7,10 +7,9 @@ import type { UserPayload } from "@/types/user-payload.type";
 const SIGNIN_QUERY = gql`
   mutation ($loginUserInput: CreateUserInput!) {
     loginUser(loginUserInput: $loginUserInput) {
-      errors {
-        field,
-        message,
-      },
+      user {
+        username
+      }
       access_token
     }
   }
@@ -27,6 +26,7 @@ export const useAuthStore = defineStore('AuthStore', {
           });          
 
           const accessToken = result.data?.loginUser?.access_token;
+          const loggedInUsername = result.data?.loginUser?.user.username;
   
           if(accessToken) {
               const token = useCookie('token');
@@ -34,6 +34,12 @@ export const useAuthStore = defineStore('AuthStore', {
               token.value = accessToken;
               
               this.isAuthenticated = true;
+          }
+
+          if(loggedInUsername) {
+            const token = useCookie('username');
+
+            token.value = loggedInUsername;
           }
         },
         logoutUser() {
