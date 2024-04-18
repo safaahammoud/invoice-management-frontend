@@ -1,41 +1,40 @@
-# Nuxt 3 Minimal Starter
+# Project Framework
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
-
+Invoices management Frontend part built using:
+- Nuxt 3 https://nuxt.com/docs/getting-started/introduction
+- Pinia store for statemanagement
+- Urql used as graphql client to do mutations and queries and handle errors https://commerce.nearform.com/open-source/urql/docs/
+-Vuetify for UI components especially server-side table
+-handled cors for better security
 ## Setup
 
 Make sure to install the dependencies:
 
 ```bash
-# npm
-npm install
 
-# pnpm
-pnpm install
-
-# yarn
 yarn install
 
-# bun
-bun install
 ```
+
+# Project Structure
+The project main directories are: pages and components,and store, and layouts.
+
+All views are lazy loaded modules on router level.
+The following folders are found:
+
+Components: contains reusable sections to be added to the pages.
+
+Layouts: there are 2 layouts one containing auth pages like login and signup and the other for pages that requires the user to be already authenticated
 
 ## Development Server
 
 Start the development server on `http://localhost:3000`:
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm run dev
 
 # yarn
 yarn dev
 
-# bun
-bun run dev
 ```
 
 ## Production
@@ -71,5 +70,3 @@ yarn preview
 # bun
 bun run preview
 ```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
